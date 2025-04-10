@@ -14,7 +14,7 @@ private:
     float totalArea;
 
     Camera3D camera = {
-        {8.f, 4.f, 8.f},    // Position
+        {4.f, 3.f, 4.f},    // Position
         {0, 0, 0},          // Target
         {0, 1.f, 0},        // Up
         75.f,               // Fov-y
@@ -24,6 +24,13 @@ private:
     std::vector<Vector3> values;
     std::vector<unsigned char> colorMap;
     float cubeSize = 0.f;
+    float maxHeight = 0.f;
+
+    float animationStartDelay = 5.f; // Seconds
+
+    int animationStage = 0;
+    float animationDuration = 3.f;        // Seconds
+    float currentAnimationProgress = 0.f; // Seconds
 
     // Drawing
 private:
@@ -34,7 +41,14 @@ private:
             for (int j = 0; j < nCols; j++)
             {
                 const Vector3 &value = values.at((i * nCols) + j);
-                DrawCubeWiresV(Vector3{value.x, 0.f, value.z}, Vector3{cubeSize, 0.f, cubeSize}, Color{40, 40, 40, 255});
+                float y = 0.f;
+
+                if (animationStage == 0)
+                {
+                    y = StaggeredHeight(i + j);
+                }
+
+                DrawCubeWiresV(Vector3{value.x, y, value.z}, Vector3{cubeSize, 0.f, cubeSize}, Fade(LINECOLOR, 1.f - fabsf(y) / 2.f));
             }
         }
     }
@@ -45,8 +59,15 @@ private:
         {
             for (int j = 0; j < nCols; j++)
             {
+                float y = 0;
+
+                if (animationStage == 1)
+                {
+                    y = StaggeredHeight(i + j);
+                }
+
                 const Vector3 &value = values.at((i * nCols) + j);
-                DrawSphere(Vector3{value.x, 0.f, value.z}, 0.01f, Color{40, 40, 40, 255});
+                DrawSphere(Vector3{value.x, y, value.z}, 0.01f, Color{40, 40, 40, 255});
             }
         }
     }
@@ -58,7 +79,16 @@ private:
             for (int j = 0; j < nCols; j++)
             {
                 const int idx = (i * nCols) + j;
-                DrawSphere(values.at(idx), 0.01f, Color{colorMap.at(idx), 40, 40, 255});
+                Vector3 current = values.at(idx);
+
+                float y = current.y;
+
+                if (animationStage == 2)
+                {
+                    y = StaggeredHeight(i + j, 0.f, current.y);
+                }
+
+                DrawSphere(Vector3{current.x, y, current.z}, 0.1f, Color{static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / maxHeight))), 40, 40, static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / fabsf(current.y))))});
             }
         }
     }
@@ -115,7 +145,7 @@ private:
         float startX = -totalArea / 2;
         float startZ = startX;
 
-        float maxHeight = 0.f;
+        // float maxHeight = 0.f;
 
         for (int i = 0; i < nCols; i++)
         {
@@ -132,6 +162,7 @@ private:
             }
         }
 
+        // TODO: In case we don't want the animation
         for (int i = 0; i < nCols * nCols; i++)
         {
             colorMap.at(i) = 255 * fabsf(values.at(i).y) / maxHeight;
@@ -145,6 +176,30 @@ private:
         ToggleFullscreen();
     }
 
+    float StaggeredHeight(int pos, float startingHeight = -2.f, float endHeight = 0.f, float delay = 0.5f)
+    {
+        int maxPos = 2 * (nCols - 1);               // since you're using a square grid, max i + j
+        float maxDelay = animationDuration * delay; // Let stagger consume 50% of total time (tweakable)
+        float delayPerPos = maxDelay / maxPos;
+
+        float tStart = pos * delayPerPos;
+        float t = (currentAnimationProgress - tStart) / (animationDuration - maxDelay);
+
+        t = Clamp(t, 0.f, 1.f);
+        return Lerp(startingHeight, endHeight, t);
+    }
+
+    // TODO
+    void PlayNextIfPossible()
+    {
+        currentAnimationProgress += GetFrameTime();
+        if (currentAnimationProgress >= animationDuration)
+        {
+            currentAnimationProgress = 0.f;
+            animationStage++;
+        }
+    }
+
     // Main
 public:
     Visualizer(int nCols = 10, float totalArea = 1.f, int width = 1000, int height = 500)
@@ -153,8 +208,8 @@ public:
         this->totalArea = totalArea * 2;
         InitWindow(width, height, "GA Demo");
         SetTargetFPS(60);
-        GenerateGrid();
         SetFullScreen();
+        GenerateGrid();
     }
 
     void Visualize(int inputc, Vector2 *input)
@@ -170,10 +225,23 @@ public:
         // DrawCustomGrid(nCols, 1.f, LINECOLOR); // Debug
         // Draw3DAxis(); // Debug
 
-        // TODO
-        DrawInitialGrid();      // Stagger animation then,
-        DrawGridCenterPoints(); // Stagger animation then,
-        DrawGridHeight();       // Stagger animation
+        if (animationStartDelay > 0)
+        {
+            animationStartDelay -= GetFrameTime();
+        }
+        else
+        {
+            DrawInitialGrid();
+            if (animationStage > 0)
+            {
+                DrawGridCenterPoints();
+            }
+            if (animationStage > 1)
+            {
+                DrawGridHeight();
+            }
+            PlayNextIfPossible();
+        }
 
         // Render predictions
 
