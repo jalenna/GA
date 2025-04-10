@@ -88,7 +88,14 @@ private:
                     y = StaggeredHeight(i + j, 0.f, current.y);
                 }
 
-                DrawSphere(Vector3{current.x, y, current.z}, 0.1f, Color{static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / maxHeight))), 40, 40, static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / fabsf(current.y))))});
+                unsigned char currentR = static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / maxHeight)));
+                unsigned char currentA = 0;
+                if (current.y)
+                {
+                    currentA = static_cast<unsigned char>(static_cast<int>(255 * (fabsf(y) / fabsf(current.y))));
+                }
+
+                DrawSphere(Vector3{current.x, y, current.z}, 0.1f, Color{currentR, 40, 40, currentA});
             }
         }
     }
@@ -161,6 +168,9 @@ private:
                     maxHeight = currentHeight;
             }
         }
+
+        if (maxHeight == 0)
+            maxHeight = 1.f;
 
         // TODO: In case we don't want the animation
         for (int i = 0; i < nCols * nCols; i++)
