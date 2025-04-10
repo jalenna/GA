@@ -8,7 +8,9 @@ namespace ProblemSpace
 
     float Output(Vector2 input)
     {
-        return -1 * exp(-1 * pow((pow(input.x, 2) + pow(input.y, 2)), 2));
+        float a = pow(input.x, 2) + pow(input.y, 2);
+        // return -1 * exp(-1 * pow((pow(input.x, 2) + pow(input.y, 2)), 2));
+        return sinf(a);
     }
 
 };
