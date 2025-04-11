@@ -2,6 +2,8 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <vector>
+
+#include <stdlib.h>
 #include "./problem.hpp"
 
 #define BACKGROUNDCOLOR Color{18, 18, 18, 255}
@@ -10,8 +12,12 @@
 class Visualizer
 {
 private:
+    int screenWidth;
+    int screenHeight;
     float nCols;
     float totalArea;
+    Font textFont;
+    int currentFunction = 1;
 
     Camera3D camera = {
         {4.f, 3.f, 4.f},    // Position
@@ -63,7 +69,7 @@ private:
 
                 if (animationStage == 1)
                 {
-                    y = StaggeredHeight(i + j);
+                    y = StaggeredHeight(i + j, 2.f);
                 }
 
                 const Vector3 &value = values.at((i * nCols) + j);
@@ -160,7 +166,15 @@ private:
             {
                 float x = startX + i * cubeSize + cubeSize / 2.f;
                 float z = startZ + j * cubeSize + cubeSize / 2.f;
-                float y = ProblemSpace::Output(Vector2{x, z});
+                float y = 0.f;
+                if (currentFunction == 1)
+                {
+                    y = ProblemSpace::ThreeDSin(Vector2{x, z});
+                }
+                else if (currentFunction == 2)
+                {
+                    y = ProblemSpace::ThreeDExp(Vector2{x, z});
+                }
 
                 values.at((i * nCols) + j) = Vector3{x, y, z};
                 float currentHeight = fabsf(y);
@@ -210,16 +224,26 @@ private:
         }
     }
 
+    void RestartAll()
+    {
+        GenerateGrid();
+        currentAnimationProgress = 0.f;
+        animationStage = 2;
+    }
+
     // Main
 public:
     Visualizer(int nCols = 10, float totalArea = 1.f, int width = 1000, int height = 500)
     {
         this->nCols = nCols;
         this->totalArea = totalArea * 2;
+        screenWidth = width;
+        screenHeight = height;
         InitWindow(width, height, "GA Demo");
         SetTargetFPS(60);
         SetFullScreen();
         GenerateGrid();
+        textFont = LoadFont("resources/fonts/Poppins-Regular.ttf");
     }
 
     void Visualize(int inputc, Vector2 *input)
@@ -230,17 +254,44 @@ public:
 
         ClearBackground(BACKGROUNDCOLOR);
 
-        BeginMode3D(camera);
-        // Render problem space
-        // DrawCustomGrid(nCols, 1.f, LINECOLOR); // Debug
-        // Draw3DAxis(); // Debug
-
         if (animationStartDelay > 0)
         {
             animationStartDelay -= GetFrameTime();
+            DrawTextEx(textFont, TextFormat("Starting in %.2f", animationStartDelay), Vector2{10, 10}, 20, 1.f, WHITE);
         }
         else
         {
+            DrawTextEx(textFont, "Press R to restart animations", Vector2{10, 10}, 20, 1.f, WHITE);
+            DrawTextEx(textFont, "Press [1 - 2] for different functions", Vector2{10, 40}, 20, 1.f, WHITE);
+            DrawTextEx(textFont, TextFormat("Current function: %d", currentFunction), Vector2{10, 70}, 20, 1.f, WHITE);
+
+            BeginMode3D(camera);
+            // Render problem space
+            // DrawCustomGrid(nCols, 1.f, LINECOLOR); // Debug
+            // Draw3DAxis(); // Debug
+
+            if (IsKeyPressed(KEY_R))
+            {
+                animationStage = 0.f;
+                currentAnimationProgress = 0.f;
+            }
+            if (IsKeyPressed(KEY_ONE))
+            {
+                if (currentFunction != 1)
+                {
+                    currentFunction = 1;
+                    RestartAll();
+                }
+            }
+            else if (IsKeyPressed(KEY_TWO))
+            {
+                if (currentFunction != 2)
+                {
+                    currentFunction = 2;
+                    RestartAll();
+                }
+            }
+
             DrawInitialGrid();
             if (animationStage > 0)
             {
@@ -251,16 +302,17 @@ public:
                 DrawGridHeight();
             }
             PlayNextIfPossible();
+
+            // Render predictions
+
+            EndMode3D();
         }
-
-        // Render predictions
-
-        EndMode3D();
 
         EndDrawing();
     }
 
     ~Visualizer()
     {
+        CloseWindow();
     }
 };

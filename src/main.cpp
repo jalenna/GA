@@ -14,7 +14,6 @@ int main(int argc, char **argv)
     {
         visualizer.Visualize(0, {0});
     }
-    CloseWindow();
 
     return 0;
 }
