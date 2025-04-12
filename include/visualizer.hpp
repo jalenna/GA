@@ -17,7 +17,8 @@ private:
     float nCols;
     float totalArea;
     Font textFont;
-    int currentFunction = 1;
+    int currentFunction;
+    int totalFunctions;
 
     Camera3D camera = {
         {4.f, 3.f, 4.f},    // Position
@@ -159,6 +160,7 @@ private:
         float startZ = startX;
 
         // float maxHeight = 0.f;
+        maxHeight = 0.f;
 
         for (int i = 0; i < nCols; i++)
         {
@@ -167,13 +169,9 @@ private:
                 float x = startX + i * cubeSize + cubeSize / 2.f;
                 float z = startZ + j * cubeSize + cubeSize / 2.f;
                 float y = 0.f;
-                if (currentFunction == 1)
+                if (currentFunction >= 1)
                 {
-                    y = ProblemSpace::ThreeDSin(Vector2{x, z});
-                }
-                else if (currentFunction == 2)
-                {
-                    y = ProblemSpace::ThreeDExp(Vector2{x, z});
+                    y = ProblemSpace::outputs[currentFunction - 1](Vector2{x, z});
                 }
 
                 values.at((i * nCols) + j) = Vector3{x, y, z};
@@ -224,11 +222,21 @@ private:
         }
     }
 
-    void RestartAll()
+    void RestartFunctionAnimation()
     {
         GenerateGrid();
         currentAnimationProgress = 0.f;
         animationStage = 2;
+    }
+
+    void SetFunction(int idx)
+    {
+        idx -= 48;
+        if ((idx > 0 && idx <= totalFunctions) && currentFunction != idx)
+        {
+            currentFunction = idx;
+            RestartFunctionAnimation();
+        }
     }
 
     // Main
@@ -239,6 +247,8 @@ public:
         this->totalArea = totalArea * 2;
         screenWidth = width;
         screenHeight = height;
+        currentFunction = 1;
+        totalFunctions = ProblemSpace::outputs.size();
         InitWindow(width, height, "GA Demo");
         SetTargetFPS(60);
         SetFullScreen();
@@ -262,7 +272,7 @@ public:
         else
         {
             DrawTextEx(textFont, "Press R to restart animations", Vector2{10, 10}, 20, 1.f, WHITE);
-            DrawTextEx(textFont, "Press [1 - 2] for different functions", Vector2{10, 40}, 20, 1.f, WHITE);
+            DrawTextEx(textFont, TextFormat("Press [1 - %d] for different functions", totalFunctions), Vector2{10, 40}, 20, 1.f, WHITE);
             DrawTextEx(textFont, TextFormat("Current function: %d", currentFunction), Vector2{10, 70}, 20, 1.f, WHITE);
 
             BeginMode3D(camera);
@@ -275,22 +285,8 @@ public:
                 animationStage = 0.f;
                 currentAnimationProgress = 0.f;
             }
-            if (IsKeyPressed(KEY_ONE))
-            {
-                if (currentFunction != 1)
-                {
-                    currentFunction = 1;
-                    RestartAll();
-                }
-            }
-            else if (IsKeyPressed(KEY_TWO))
-            {
-                if (currentFunction != 2)
-                {
-                    currentFunction = 2;
-                    RestartAll();
-                }
-            }
+
+            SetFunction(GetKeyPressed());
 
             DrawInitialGrid();
             if (animationStage > 0)
